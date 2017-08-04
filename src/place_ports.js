@@ -24,36 +24,23 @@ dc_graph.place_ports = function(diagram, nodes, wnodes, edges, wedges, ports, wp
         np.push(p);
     });
 
-    function dpos(n, e) {
+    function norm(v) {
+        var c = Math.hypot(v.dx, v.dy);
+        return {
+            dx: v.dx / c,
+            dy: v.dy / c
+        };
+    }
+    function vec(n, e) {
         var dy = e.target.cola.y - e.source.cola.y,
             dx = e.target.cola.x - e.source.cola.x;
         if(e.source !== n)
             dy = -dy, dx = -dx;
-        return {dy: dy, dx: dx};
+        return norm({dy: dy, dx: dx});
     }
-    function angle(n, e) {
+    function angle(v) {
         var dp = dpos(n, e);
-        return Math.atan2(dp.dy, dp.dx);
-    }
-    function normalize_angle(theta) {
-        while(theta < -Math.PI)
-            theta += 2*Math.PI;
-        while(theta > Math.PI)
-            theta -= 2*Math.PI;
-        return theta;
-    }
-    function normalize_angle_delta(theta) {
-        while(theta < 0)
-            theta += 2*Math.PI;
-        while(theta > 2*Math.PI)
-            theta -= 2*Math.PI;
-        return theta;
-    }
-    function between_angles(theta, a, b) {
-        if(a < b)
-            return a <= theta && theta < b;
-        else
-            return a <= theta || theta < b;
+        return Math.atan2(v.dy, v.dx);
     }
     function clip_angle(theta, a, b) {
         if(Math.abs(normalize_angle(theta - a)) <
@@ -68,8 +55,12 @@ dc_graph.place_ports = function(diagram, nodes, wnodes, edges, wedges, ports, wp
         var n = nodes[nid],
             nports = node_ports[nid];
         nports.forEach(function(p) {
-            var angs = p.edges.map(angle.bind(null, n));
-            p.theta = angs.length ? d3.sum(angs)/angs.length : p.theta || undefined;
+            var angs = p.edges.map(vec.bind(null, n));
+            p.vec = angs.length ? {
+                dx: d3.sum(angs, function(v) { return v.dx; })/angs.length,
+                dy: d3.sum(angs, function(v) { return v.dy; })/angs.length
+            }
+                : p.theta || undefined;
             if(p.orig) { // only specified ports have bounds
                 var bounds = diagram.portBounds.eval(p);
                 if(bounds)
